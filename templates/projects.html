@@ -1,15 +1,204 @@
 {% extends "layout.html" %}
 {% block content %}
-<div class="p-4 bg-white rounded-xl shadow">
-  <h2 class="font-semibold mb-3">โปรเจ็กต์ทั้งหมด</h2>
-  <ul class="list-disc pl-5">
+<div class="space-y-6">
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-800">โปรเจ็กต์ทั้งหมด</h1>
+      <p class="text-gray-600">จัดการและดูโปรเจ็กต์ทั้งหมดในระบบ</p>
+    </div>
+    <a href="{{ url_for('index') }}" class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200">
+      <i data-feather="plus" class="w-4 h-4"></i>
+      สร้างโปรเจ็กต์ใหม่
+    </a>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid md:grid-cols-3 gap-6">
+    <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
+      <div class="flex items-center gap-3">
+        <div class="p-3 bg-blue-100 rounded-lg">
+          <i data-feather="folder" class="w-6 h-6 text-blue-600"></i>
+        </div>
+        <div>
+          <div class="text-2xl font-bold text-gray-800">{{ projects | length }}</div>
+          <div class="text-sm text-gray-600">โปรเจ็กต์ทั้งหมด</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
+      <div class="flex items-center gap-3">
+        <div class="p-3 bg-green-100 rounded-lg">
+          <i data-feather="image" class="w-6 h-6 text-green-600"></i>
+        </div>
+        <div>
+          <div class="text-2xl font-bold text-gray-800" id="totalPhotos">-</div>
+          <div class="text-sm text-gray-600">รูปภาพทั้งหมด</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
+      <div class="flex items-center gap-3">
+        <div class="p-3 bg-purple-100 rounded-lg">
+          <i data-feather="calendar" class="w-6 h-6 text-purple-600"></i>
+        </div>
+        <div>
+          <div class="text-2xl font-bold text-gray-800" id="recentProjects">-</div>
+          <div class="text-sm text-gray-600">โปรเจ็กต์ใหม่ (7 วัน)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Projects List -->
+  <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
+    <div class="flex items-center justify-between mb-6">
+      <h2 class="text-xl font-semibold text-gray-800 flex items-center gap-2">
+        <i data-feather="list" class="w-5 h-5 text-blue-600"></i>
+        รายการโปรเจ็กต์
+      </h2>
+      <div class="flex gap-2">
+        <input type="text" id="searchInput" placeholder="ค้นหาโปรเจ็กต์..." 
+               class="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200" />
+        <select id="sortSelect" class="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200">
+          <option value="date-desc">วันที่ใหม่สุด</option>
+          <option value="date-asc">วันที่เก่าสุด</option>
+          <option value="name-asc">ชื่อ A-Z</option>
+          <option value="name-desc">ชื่อ Z-A</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="projectsList" class="space-y-4">
       {% for r in projects %}
-        <li class="mb-1">
-          <a class="text-blue-600 hover:underline" href="{{ url_for('browse', project=r['name']) }}">{{ r['name'] }}</a>
-          <a class="ml-2 text-green-600 hover:underline" href="{{ url_for('report', project=r['name']) }}">ดาวน์โหลดรายงาน</a>
-          <span class="text-xs text-gray-500">— {{ r['created_at'] }}</span>
-        </li>
+        <div class="project-item file-item bg-gray-50 rounded-lg p-6 border border-gray-200 hover:border-blue-300 transition-all duration-300" 
+             data-name="{{ r['name'] }}" 
+             data-date="{{ r['created_at'] }}">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+              <div class="p-3 bg-blue-100 rounded-lg">
+                <i data-feather="folder" class="w-6 h-6 text-blue-600"></i>
+              </div>
+              <div>
+                <h3 class="text-lg font-semibold text-gray-800">{{ r['name'] }}</h3>
+                <p class="text-sm text-gray-500">สร้างเมื่อ {{ r['created_at'] }}</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3">
+              <a href="{{ url_for('browse', project=r['name']) }}" 
+                 class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200">
+                <i data-feather="image" class="w-4 h-4"></i>
+                ดูรูป
+              </a>
+              <a href="{{ url_for('report', project=r['name']) }}" 
+                 class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-200">
+                <i data-feather="download" class="w-4 h-4"></i>
+                รายงาน
+              </a>
+            </div>
+          </div>
+        </div>
       {% endfor %}
-  </ul>
+    </div>
+
+    <div id="noResults" class="hidden text-center py-12">
+      <i data-feather="search" class="w-16 h-16 text-gray-300 mx-auto mb-4"></i>
+      <p class="text-gray-500">ไม่พบโปรเจ็กต์ที่ตรงกับเงื่อนไข</p>
+    </div>
+  </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('searchInput');
+  const sortSelect = document.getElementById('sortSelect');
+  const projectsList = document.getElementById('projectsList');
+  const noResults = document.getElementById('noResults');
+  const projectItems = document.querySelectorAll('.project-item');
+
+  // Calculate stats
+  function updateStats() {
+    // Fetch real stats from API
+    fetch('/api/stats')
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById('totalPhotos').textContent = data.total_photos;
+        document.getElementById('recentProjects').textContent = data.recent_projects;
+      })
+      .catch(error => {
+        console.error('Error fetching stats:', error);
+        // Fallback to calculated stats
+        const totalPhotos = projectItems.length;
+        const recentProjects = Array.from(projectItems).filter(item => {
+          const date = new Date(item.dataset.date);
+          const weekAgo = new Date();
+          weekAgo.setDate(weekAgo.getDate() - 7);
+          return date > weekAgo;
+        }).length;
+
+        document.getElementById('totalPhotos').textContent = totalPhotos;
+        document.getElementById('recentProjects').textContent = recentProjects;
+      });
+  }
+
+  function filterAndSortProjects() {
+    const searchTerm = searchInput.value.toLowerCase();
+    const sortBy = sortSelect.value;
+    
+    let visibleItems = 0;
+    const itemArray = Array.from(projectItems);
+
+    // Filter items
+    itemArray.forEach(item => {
+      const name = item.dataset.name.toLowerCase();
+      const nameMatch = !searchTerm || name.includes(searchTerm);
+      
+      if (nameMatch) {
+        item.style.display = 'block';
+        visibleItems++;
+      } else {
+        item.style.display = 'none';
+      }
+    });
+
+    // Sort items
+    itemArray.sort((a, b) => {
+      switch(sortBy) {
+        case 'date-desc':
+          return new Date(b.dataset.date) - new Date(a.dataset.date);
+        case 'date-asc':
+          return new Date(a.dataset.date) - new Date(b.dataset.date);
+        case 'name-asc':
+          return a.dataset.name.localeCompare(b.dataset.name);
+        case 'name-desc':
+          return b.dataset.name.localeCompare(a.dataset.name);
+        default:
+          return 0;
+      }
+    });
+
+    // Reorder items in DOM
+    itemArray.forEach(item => {
+      projectsList.appendChild(item);
+    });
+
+    // Show/hide no results
+    if (visibleItems === 0) {
+      noResults.classList.remove('hidden');
+    } else {
+      noResults.classList.add('hidden');
+    }
+  }
+
+  // Add event listeners
+  searchInput.addEventListener('input', filterAndSortProjects);
+  sortSelect.addEventListener('change', filterAndSortProjects);
+
+  // Initialize
+  updateStats();
+  filterAndSortProjects();
+});
+</script>
 {% endblock %}
