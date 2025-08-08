@@ -131,6 +131,7 @@ autoreport/
 
 - **File Validation** - ตรวจสอบประเภทไฟล์
 - **Secure Filenames** - ป้องกัน path traversal
+- **Path Sanitization** - ให้บริการไฟล์อัปโหลดอย่างปลอดภัย
 - **File Size Limits** - จำกัดขนาดไฟล์
 - **SQL Injection Protection** - ใช้ parameterized queries
 
