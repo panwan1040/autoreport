@@ -3,7 +3,9 @@ import sqlite3
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, send_file, flash
 from werkzeug.utils import secure_filename
+from copy import deepcopy
 from docx import Document
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Inches
 from PIL import Image
 
@@ -11,6 +13,9 @@ from PIL import Image
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), "uploads")
 DB_PATH = os.path.join(os.path.dirname(__file__), "data.sqlite")
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "webp"}
+TEMPLATE_DOCX = os.path.join(
+    os.path.dirname(__file__), "4.1 รายงานประกอบการซ่อมแซมโครงสร้างอาคาร 4 ช.docx"
+)
 
 STEP_LABELS = {
     "1": "1. ก่อนการดำเนินงาน",
@@ -163,30 +168,64 @@ def report(project):
         step = r["step"]
         data.setdefault(point, {}).setdefault(step, []).append(r)
 
-    # Create document
-    doc = Document()
-    doc.add_heading(f"รายงานประกอบการซ่อมแซมโครงสร้าง — โปรเจ็กต์ {project}", level=0)
-    # Separate Thai text from strftime to avoid UnicodeEncodeError
-    doc.add_paragraph("วันที่จัดทำรายงาน: " + datetime.now().strftime("%d/%m/%Y %H:%M"))
+    # Create document from template then clear existing content
+    template = Document(TEMPLATE_DOCX)
+    base_table = template.tables[0]
+    doc = Document(TEMPLATE_DOCX)
+    for t in doc.tables:
+        t._element.getparent().remove(t._element)
+    for p in doc.paragraphs:
+        p._element.getparent().remove(p._element)
 
-    # For each point
+    # Heading and report date
+    doc.add_heading(
+        f"รายงานประกอบการซ่อมแซมโครงสร้าง — โปรเจ็กต์ {project}", level=0
+    )
+    doc.add_paragraph(
+        "วันที่จัดทำรายงาน: " + datetime.now().strftime("%d/%m/%Y %H:%M")
+    )
+
+    def clear_cell(cell):
+        for p in cell.paragraphs:
+            p._element.getparent().remove(p._element)
+
+    cell_map = {
+        "1": (0, 0),
+        "2": (0, 1),
+        "3": (2, 0),
+        "4": (2, 1),
+        "5": (4, 0),
+        "6": (4, 1),
+    }
+
+    # For each point create table and insert photos
     for point in sorted(data.keys(), key=lambda x: str(x)):
         doc.add_heading(f"จุดที่ {point}", level=1)
-        # Steps 1..6 in order
-        for s in ["1","2","3","4","5","6"]:
-            doc.add_heading(STEP_LABELS.get(s, f"ขั้นตอน {s}"), level=2)
-            photos = data.get(point, {}).get(s, [])
+        tbl = deepcopy(base_table._tbl)
+        doc._body._element.append(tbl)
+        table = doc.tables[-1]
+        for step, (row, col) in cell_map.items():
+            cell = table.cell(row, col)
+            clear_cell(cell)
+            photos = data.get(point, {}).get(step, [])
             if not photos:
-                doc.add_paragraph("(ยังไม่มีรูปในขั้นตอนนี้)")
+                cell.add_paragraph("(ยังไม่มีรูปในขั้นตอนนี้)")
                 continue
             for ph in photos:
                 img_abs = os.path.join(UPLOAD_FOLDER, ph["rel_path"]).replace("\\", "/")
                 try:
-                    width = resize_for_docx(img_abs, 5.5)
-                    doc.add_picture(img_abs, width=width)
-                    doc.add_paragraph(f"ไฟล์: {ph['filename']} อัปโหลดเมื่อ {ph['uploaded_at']}").italic = True
+                    width = resize_for_docx(img_abs, 2.5)
+                    par = cell.add_paragraph()
+                    par.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                    run = par.add_run()
+                    run.add_picture(img_abs, width=width)
+                    cell.add_paragraph(
+                        f"ไฟล์: {ph['filename']} อัปโหลดเมื่อ {ph['uploaded_at']}"
+                    ).italic = True
                 except Exception as e:
-                    doc.add_paragraph(f"(ไม่สามารถแทรกรูป {ph['filename']}: {e})")
+                    cell.add_paragraph(
+                        f"(ไม่สามารถแทรกรูป {ph['filename']}: {e})"
+                    )
     # Save to temp and send
     out_dir = os.path.join(os.path.dirname(__file__), "generated")
     os.makedirs(out_dir, exist_ok=True)
