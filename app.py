@@ -1,6 +1,6 @@
 import os
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, send_file, flash, jsonify
 from werkzeug.utils import secure_filename
 from copy import deepcopy
@@ -145,30 +145,37 @@ def upload():
 @app.route("/upload_ajax", methods=["POST"])
 def upload_ajax():
     """AJAX endpoint for drag and drop uploads"""
+    conn = None
     try:
         project = request.form.get("project")
         point = request.form.get("point")
         step = request.form.get("step")
         files = request.files.getlist("photos")
-        
+
         if not all([project, point, step]):
             return jsonify({"success": False, "message": "กรุณากรอกข้อมูลให้ครบถ้วน"})
-        
+
         if not files:
             return jsonify({"success": False, "message": "ยังไม่ได้เลือกไฟล์รูป"})
-        
+
         # Ensure project exists
         conn = get_db()
         row = conn.execute("SELECT id FROM projects WHERE name=?", (project,)).fetchone()
         if not row:
-            conn.execute("INSERT INTO projects(name, created_at) VALUES (?, ?)", 
-                       (project, datetime.now().isoformat(timespec="seconds")))
+            conn.execute(
+                "INSERT INTO projects(name, created_at) VALUES (?, ?)",
+                (project, datetime.now().isoformat(timespec="seconds"))
+            )
             conn.commit()
-        
-        proj_folder = os.path.join(UPLOAD_FOLDER, secure_filename(project), 
-                                  secure_filename(point), secure_filename(step))
+
+        proj_folder = os.path.join(
+            UPLOAD_FOLDER,
+            secure_filename(project),
+            secure_filename(point),
+            secure_filename(step),
+        )
         os.makedirs(proj_folder, exist_ok=True)
-        
+
         saved_files = []
         for f in files:
             if f and allowed_file(f.filename):
@@ -178,25 +185,38 @@ def upload_ajax():
                 rel = os.path.relpath(path, start=UPLOAD_FOLDER)
                 conn.execute(
                     "INSERT INTO photos(project, point, step, filename, rel_path, uploaded_at) VALUES (?, ?, ?, ?, ?, ?)",
-                    (project, point, step, fname, rel, datetime.now().isoformat(timespec="seconds"))
+                    (
+                        project,
+                        point,
+                        step,
+                        fname,
+                        rel,
+                        datetime.now().isoformat(timespec="seconds"),
+                    ),
                 )
-                saved_files.append({
-                    "filename": fname,
-                    "size": os.path.getsize(path),
-                    "url": url_for("static_file", path=rel)
-                })
-        
+                saved_files.append(
+                    {
+                        "filename": fname,
+                        "size": os.path.getsize(path),
+                        "url": url_for("static_file", path=rel),
+                    }
+                )
+
         conn.commit()
-        conn.close()
-        
-        return jsonify({
-            "success": True,
-            "message": f"อัปโหลดสำเร็จ {len(saved_files)} ไฟล์",
-            "files": saved_files
-        })
-        
+
+        return jsonify(
+            {
+                "success": True,
+                "message": f"อัปโหลดสำเร็จ {len(saved_files)} ไฟล์",
+                "files": saved_files,
+            }
+        )
+
     except Exception as e:
         return jsonify({"success": False, "message": f"เกิดข้อผิดพลาด: {str(e)}"})
+    finally:
+        if conn:
+            conn.close()
 
 def resize_for_docx(img_path, max_width_inches=5.5):
     # Limit width to page content area
@@ -332,8 +352,7 @@ def get_stats():
     total_photos = conn.execute("SELECT COUNT(*) FROM photos").fetchone()[0]
     
     # Recent projects (last 7 days)
-    week_ago = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-    week_ago = week_ago.replace(day=week_ago.day - 7)
+    week_ago = datetime.now() - timedelta(days=7)
     recent_projects = conn.execute(
         "SELECT COUNT(*) FROM projects WHERE created_at >= ?", 
         (week_ago.isoformat(),)
