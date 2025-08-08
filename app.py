@@ -1,8 +1,18 @@
 import os
 import sqlite3
 from datetime import datetime, timedelta
-from flask import Flask, render_template, request, redirect, url_for, send_file, flash, jsonify
-from werkzeug.utils import secure_filename
+from flask import (
+    Flask,
+    render_template,
+    request,
+    redirect,
+    url_for,
+    send_file,
+    flash,
+    jsonify,
+    abort,
+)
+from werkzeug.utils import secure_filename, safe_join
 from copy import deepcopy
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -337,8 +347,11 @@ def browse(project):
 
 @app.route("/uploads/<path:path>")
 def static_file(path):
-    # Serve uploaded files
-    return send_file(os.path.join(UPLOAD_FOLDER, path))
+    """Serve user-uploaded files with basic path sanitization."""
+    full_path = safe_join(UPLOAD_FOLDER, path)
+    if not full_path or not os.path.isfile(full_path):
+        abort(404)
+    return send_file(full_path)
 
 @app.route("/api/stats", methods=["GET"])
 def get_stats():
