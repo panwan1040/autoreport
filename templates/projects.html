@@ -3,12 +3,13 @@
 <div class="p-4 bg-white rounded-xl shadow">
   <h2 class="font-semibold mb-3">โปรเจ็กต์ทั้งหมด</h2>
   <ul class="list-disc pl-5">
-    {% for r in projects %}
-      <li class="mb-1">
-        <a class="text-blue-600 hover:underline" href="{{ url_for('browse', project=r['name']) }}">{{ r['name'] }}</a>
-        <span class="text-xs text-gray-500">— {{ r['created_at'] }}</span>
-      </li>
-    {% endfor %}
+      {% for r in projects %}
+        <li class="mb-1">
+          <a class="text-blue-600 hover:underline" href="{{ url_for('browse', project=r['name']) }}">{{ r['name'] }}</a>
+          <a class="ml-2 text-green-600 hover:underline" href="{{ url_for('report', project=r['name']) }}">ดาวน์โหลดรายงาน</a>
+          <span class="text-xs text-gray-500">— {{ r['created_at'] }}</span>
+        </li>
+      {% endfor %}
   </ul>
 </div>
 {% endblock %}

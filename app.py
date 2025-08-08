@@ -166,7 +166,8 @@ def report(project):
     # Create document
     doc = Document()
     doc.add_heading(f"รายงานประกอบการซ่อมแซมโครงสร้าง — โปรเจ็กต์ {project}", level=0)
-    doc.add_paragraph(datetime.now().strftime("วันที่จัดทำรายงาน: %d/%m/%Y %H:%M"))
+    # Separate Thai text from strftime to avoid UnicodeEncodeError
+    doc.add_paragraph("วันที่จัดทำรายงาน: " + datetime.now().strftime("%d/%m/%Y %H:%M"))
 
     # For each point
     for point in sorted(data.keys(), key=lambda x: str(x)):
