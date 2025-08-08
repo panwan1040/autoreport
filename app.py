@@ -242,7 +242,7 @@ def report(project):
     # Collect photos grouped by point, then step
     conn = get_db()
     rows = conn.execute(
-        "SELECT point, step, rel_path, filename, uploaded_at FROM photos WHERE project=? ORDER BY point, step, uploaded_at",
+        "SELECT id, point, step, rel_path, filename, uploaded_at FROM photos WHERE project=? ORDER BY point, step, uploaded_at",
         (project,)
     ).fetchall()
     conn.close()
@@ -330,13 +330,14 @@ def list_projects():
 def browse(project):
     conn = get_db()
     rows = conn.execute(
-        "SELECT point, step, rel_path, filename, uploaded_at FROM photos WHERE project=? ORDER BY point, step, uploaded_at",
+        "SELECT id, point, step, rel_path, filename, uploaded_at FROM photos WHERE project=? ORDER BY point, step, uploaded_at",
         (project,)
     ).fetchall()
     conn.close()
     items = []
     for r in rows:
         items.append({
+            "id": r["id"],
             "point": r["point"],
             "step": r["step"],
             "filename": r["filename"],
@@ -344,6 +345,27 @@ def browse(project):
             "url": url_for("static_file", path=r["rel_path"])  # we will implement a simple static serve
         })
     return render_template("browse.html", project=project, items=items, step_labels=STEP_LABELS)
+
+
+@app.route("/delete_photo/<int:photo_id>", methods=["POST"])
+def delete_photo(photo_id):
+    conn = get_db()
+    row = conn.execute("SELECT rel_path FROM photos WHERE id=?", (photo_id,)).fetchone()
+    if not row:
+        conn.close()
+        return jsonify({"success": False, "message": "ไม่พบรูปภาพ"})
+    file_path = os.path.join(UPLOAD_FOLDER, row["rel_path"])
+    try:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        conn.execute("DELETE FROM photos WHERE id=?", (photo_id,))
+        conn.commit()
+        return jsonify({"success": True})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"success": False, "message": str(e)})
+    finally:
+        conn.close()
 
 @app.route("/uploads/<path:path>")
 def static_file(path):

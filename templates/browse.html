@@ -70,24 +70,29 @@
       </div>
     </div>
     
-    <div id="gallery" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div id="gallery" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       {% for it in items %}
-        <div class="gallery-item file-item bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300" 
-             data-point="{{ it.point }}" 
-             data-step="{{ it.step }}" 
+        <div class="gallery-item file-item bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300"
+             data-id="{{ it.id }}"
+             data-point="{{ it.point }}"
+             data-step="{{ it.step }}"
              data-filename="{{ it.filename }}"
              data-date="{{ it.uploaded_at }}">
           <div class="relative group">
-            <img class="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105" 
-                 src="{{ it.url }}" 
+            <img class="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
+                 src="{{ it.url }}"
                  alt="{{ it.filename }}"
                  loading="lazy" />
             <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center">
-              <button class="opacity-0 group-hover:opacity-100 bg-white bg-opacity-90 p-2 rounded-full transition-all duration-300 transform scale-75 group-hover:scale-100" 
+              <button class="opacity-0 group-hover:opacity-100 bg-white bg-opacity-90 p-2 rounded-full transition-all duration-300 transform scale-75 group-hover:scale-100"
                       onclick="openImageModal('{{ it.url }}', '{{ it.filename }}')">
                 <i data-feather="maximize-2" class="w-5 h-5 text-gray-700"></i>
               </button>
             </div>
+            <button class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 bg-white bg-opacity-90 p-1 rounded-full transition-all duration-300"
+                    onclick="deletePhoto({{ it.id }}, this)">
+              <i data-feather="trash-2" class="w-4 h-4 text-red-600"></i>
+            </button>
           </div>
           <div class="p-4">
             <div class="flex items-center gap-2 mb-2">
@@ -108,7 +113,7 @@
           </div>
         </div>
       {% endfor %}
-    </div>
+      </div>
     
     <div id="noResults" class="hidden text-center py-12">
       <i data-feather="image" class="w-16 h-16 text-gray-300 mx-auto mb-4"></i>
@@ -138,14 +143,14 @@ document.addEventListener('DOMContentLoaded', function() {
   const gallery = document.getElementById('gallery');
   const noResults = document.getElementById('noResults');
   const imageCount = document.getElementById('imageCount');
-  const items = document.querySelectorAll('.gallery-item');
 
   function filterGallery() {
     const selectedPoint = pointFilter.value;
     const selectedStep = stepFilter.value;
     const selectedSort = sortFilter.value;
-    
+
     let visibleItems = 0;
+    const items = document.querySelectorAll('.gallery-item');
     const itemArray = Array.from(items);
 
     // Filter items
@@ -238,5 +243,21 @@ document.addEventListener('keydown', function(e) {
     closeImageModal();
   }
 });
+
+function deletePhoto(id, btn) {
+  if (!confirm('ต้องการลบรูปนี้หรือไม่?')) return;
+  fetch(`/delete_photo/${id}`, {method: 'POST'})
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        const item = btn.closest('.gallery-item');
+        item.remove();
+        filterGallery();
+      } else {
+        alert(data.message || 'เกิดข้อผิดพลาดในการลบ');
+      }
+    })
+    .catch(() => alert('เกิดข้อผิดพลาดในการลบ'));
+}
 </script>
 {% endblock %}
